@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int         @id @default(autoincrement())
+  username    String      @unique
+  email       String      @unique
+  password    String
+  role        String      @default("member") 
+  created_at  DateTime    @default(now())
+  
+  member      Member?
+  space_owner SpaceOwner?
+
+  @@map("users")
+}
+
+model Member {
+  id          Int         @id @default(autoincrement())
+  nama_member String
+  instansi    String?
+  alamat      String?     @db.Text
+  telp        String
+  foto        String?
+  id_user     Int?        @unique
+  user        User?       @relation(fields: [id_user], references: [id], onDelete: Cascade)
+  
+  reservasi   Reservasi[]
+
+  @@map("member")
+}
+
+model SpaceOwner {
+  id                  Int         @id @default(autoincrement())
+  nama_coworking      String
+  nama_pemilik        String
+  telp                String
+  alamat              String?     @db.Text
+  deskripsi_fasilitas String?     @db.Text
+  id_user             Int         @unique
+  user                User        @relation(fields: [id_user], references: [id], onDelete: Cascade)
+
+  spaces              Space[]
+  reservasi           Reservasi[]
+
+  @@map("space_owner")
+}
+
+model Space {
+  id               Int               @id @default(autoincrement())
+  nama_space       String
+  harga_per_jam    Float
+  tipe             String            @default("desk") // "desk" | "meeting_room" | "private_office"
+  kapasitas        Int
+  foto             String?
+  deskripsi        String?           @db.Text
+  fasilitas        String?           @db.Text
+  id_owner         Int?
+  space_owner      SpaceOwner?       @relation(fields: [id_owner], references: [id], onDelete: SetNull)
+
+  detail_reservasi DetailReservasi[]
+
+  @@map("space")
+}
+
+model Diskon {
+  id                Int               @id @default(autoincrement())
+  nama_diskon       String            @unique
+  persentase_diskon Float
+  tanggal_awal      DateTime
+  tanggal_akhir     DateTime
+
+  detail_reservasi  DetailReservasi[]
+
+  @@map("diskon")
+}
+
+model Reservasi {
+  id                Int               @id @default(autoincrement())
+  kode_booking      String            @unique
+  tanggal_reservasi DateTime
+  jam_mulai         String
+  jam_selesai       String?
+  durasi_jam        Int
+  id_owner          Int?
+  space_owner       SpaceOwner?       @relation(fields: [id_owner], references: [id], onDelete: SetNull)
+  id_member         Int
+  member            Member            @relation(fields: [id_member], references: [id], onDelete: Cascade)
+  status            String            @default("belum dikonfirm") // "belum dikonfirm" | "disetujui" | "aktif" | "selesai" | "dibatalkan"
+  created_at        DateTime          @default(now())
+
+  detail_reservasi  DetailReservasi[]
+
+  @@map("reservasi")
+}
+
+model DetailReservasi {
+  id           Int        @id @default(autoincrement())
+  id_reservasi Int
+  reservasi    Reservasi  @relation(fields: [id_reservasi], references: [id], onDelete: Cascade)
+  id_space     Int
+  space        Space      @relation(fields: [id_space], references: [id], onDelete: Cascade)
+  id_diskon    Int?
+  diskon       Diskon?    @relation(fields: [id_diskon], references: [id], onDelete: SetNull)
+  total_harga  Float
+
+  @@map("detail_reservasi")
+}
